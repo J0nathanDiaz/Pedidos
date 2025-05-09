@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador - Gestión de Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background for the page */
+        }
+        .logo-placeholder-nav {
+            width: 50px; /* Ancho del logo en la barra de navegación */
+            height: 50px; /* Alto del logo en la barra de navegación */
+            background-color: #e0e0e0;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #757575;
+        }
+        /* Estilos para los modales */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5); /* Fondo oscuro semitransparente */
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Estilos para las tablas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #e5e7eb; /* gray-200 */
+            padding: 0.75rem; /* p-3 */
+            text-align: left;
+        }
+        th {
+            background-color: #f9fafb; /* gray-50 */
+            font-weight: 600; /* font-semibold */
+        }
+        /* Estilo para botones de acción en tablas */
+        .action-button {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem; /* rounded-md */
+            font-size: 0.875rem; /* text-sm */
+            margin-right: 0.5rem; /* mr-2 */
+            transition: background-color 0.2s;
+        }
+        .edit-button {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+        }
+        .edit-button:hover {
+            background-color: #2563eb; /* hover:bg-blue-600 */
+        }
+        .delete-button { /* Aunque no se pide eliminar, es común tenerlo */
+            background-color: #ef4444; /* bg-red-500 */
+            color: white;
+        }
+        .delete-button:hover {
+            background-color: #dc2626; /* hover:bg-red-600 */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center">
+                    <div id="logoNavContainer" class="logo-placeholder-nav mr-3">
+                        <span>Logo</span>
+                    </div>
+                    <span class="font-bold text-xl text-gray-800">Panel de Administrador</span>
+                </div>
+                <div>
+                    <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+                        Cerrar Sesión <i class="fas fa-sign-out-alt ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 p-6 bg-white rounded-xl shadow-lg">
+            <h1 class="text-2xl font-semibold text-gray-700">Bienvenido, Administrador.</h1>
+            <p class="text-gray-600 mt-1">Aquí puedes gestionar los pedidos y los usuarios del sistema.</p>
+        </div>
+
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button id="tabPedidos" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-blue-500 text-blue-600" aria-current="page">
+                        Pedidos Gestionados
+                    </button>
+                    <button id="tabUsuarios" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        Gestión de Usuarios
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <div id="pedidosContent" class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Listado de Pedidos</h2>
+            <div class="overflow-x-auto">
+                <table id="pedidosTable" class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Teléfono</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Delivery</th>
+                            <th>Fecha Entrega</th>
+                            <th>Agendado por</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pedidosTableBody">
+                        </tbody>
+                </table>
+            </div>
+            <p id="noPedidosMessage" class="mt-4 text-gray-500" style="display: none;">No hay pedidos registrados.</p>
+        </div>
+
+        <div id="usuariosContent" class="bg-white p-6 rounded-xl shadow-lg" style="display: none;">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Listado de Usuarios</h2>
+                <button id="openCreateUserModal" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+                    <i class="fas fa-plus mr-2"></i>Crear Nuevo Usuario
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table id="usersTable" class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Usuario</th>
+                            <th>Es Admin</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        </tbody>
+                </table>
+            </div>
+            <p id="noUsersMessage" class="mt-4 text-gray-500" style="display: none;">No hay otros usuarios registrados.</p>
+        </div>
+    </main>
+
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeCreateUserModal">&times;</span>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Crear Nuevo Usuario</h3>
+            <form id="createUserForm">
+                <div class="mb-4">
+                    <label for="newUserName" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <input type="text" id="newUserName" name="newUserName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="newUserUsername" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                    <input type="text" id="newUserUsername" name="newUserUsername" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="newUserPassword" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="newUserPassword" name="newUserPassword" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Tipo de Usuario</label>
+                    <select id="newUserIsAdmin" name="newUserIsAdmin" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="false">Usuario Regular</option>
+                        <option value="true">Administrador</option>
+                    </select>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button type="button" id="cancelCreateUser" class="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Crear Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeEditUserModal">&times;</span>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Editar Usuario</h3>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="mb-4">
+                    <label for="editUserName" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <input type="text" id="editUserName" name="editUserName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="editUserUsername" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                    <input type="text" id="editUserUsername" name="editUserUsername" required readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm">
+                     <p class="text-xs text-gray-500 mt-1">El nombre de usuario no se puede cambiar.</p>
+                </div>
+                <div class="mb-4">
+                    <label for="editUserPassword" class="block text-sm font-medium text-gray-700">Nueva Contraseña (opcional)</label>
+                    <input type="password" id="editUserPassword" name="editUserPassword" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Dejar en blanco para no cambiar">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Tipo de Usuario</label>
+                    <select id="editUserIsAdmin" name="editUserIsAdmin" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="false">Usuario Regular</option>
+                        <option value="true">Administrador</option>
+                    </select>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button type="button" id="cancelEditUser" class="mr-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Autenticación y Protección de Ruta ---
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!loggedInUser || !loggedInUser.isAdmin) {
+            alert('Acceso denegado. Debes ser administrador.');
+            window.location.href = 'index.html'; // O la página de login que hayas nombrado
+        }
+
+        // --- Elementos del DOM ---
+        const logoutButton = document.getElementById('logoutButton');
+        const logoNavContainer = document.getElementById('logoNavContainer');
+        // Pestañas
+        const tabPedidos = document.getElementById('tabPedidos');
+        const tabUsuarios = document.getElementById('tabUsuarios');
+        const pedidosContent = document.getElementById('pedidosContent');
+        const usuariosContent = document.getElementById('usuariosContent');
+        // Pedidos
+        const pedidosTableBody = document.getElementById('pedidosTableBody');
+        const noPedidosMessage = document.getElementById('noPedidosMessage');
+        // Usuarios
+        const usersTableBody = document.getElementById('usersTableBody');
+        const noUsersMessage = document.getElementById('noUsersMessage');
+        const openCreateUserModalButton = document.getElementById('openCreateUserModal');
+        // Modal Crear Usuario
+        const createUserModal = document.getElementById('createUserModal');
+        const closeCreateUserModalButton = document.getElementById('closeCreateUserModal');
+        const cancelCreateUserButton = document.getElementById('cancelCreateUser');
+        const createUserForm = document.getElementById('createUserForm');
+        // Modal Editar Usuario
+        const editUserModal = document.getElementById('editUserModal');
+        const closeEditUserModalButton = document.getElementById('closeEditUserModal');
+        const cancelEditUserButton = document.getElementById('cancelEditUser');
+        const editUserForm = document.getElementById('editUserForm');
+
+        // --- Datos (desde localStorage) ---
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [];
+
+        // --- Lógica de Pestañas ---
+        function showPedidosTab() {
+            pedidosContent.style.display = 'block';
+            usuariosContent.style.display = 'none';
+            tabPedidos.classList.add('border-blue-500', 'text-blue-600');
+            tabPedidos.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            tabUsuarios.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            tabUsuarios.classList.remove('border-blue-500', 'text-blue-600');
+            loadPedidos();
+        }
+
+        function showUsuariosTab() {
+            pedidosContent.style.display = 'none';
+            usuariosContent.style.display = 'block';
+            tabUsuarios.classList.add('border-blue-500', 'text-blue-600');
+            tabUsuarios.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            tabPedidos.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            tabPedidos.classList.remove('border-blue-500', 'text-blue-600');
+            loadUsers();
+        }
+
+        tabPedidos.addEventListener('click', showPedidosTab);
+        tabUsuarios.addEventListener('click', showUsuariosTab);
+
+
+        // --- Lógica de Carga de Datos ---
+        function loadPedidos() {
+            pedidosTableBody.innerHTML = ''; // Limpiar tabla
+            pedidos = JSON.parse(localStorage.getItem('pedidos')) || []; // Recargar pedidos
+
+            if (pedidos.length === 0) {
+                noPedidosMessage.style.display = 'block';
+                pedidosTable.style.display = 'none';
+                return;
+            }
+            noPedidosMessage.style.display = 'none';
+            pedidosTable.style.display = 'table';
+
+            pedidos.forEach(pedido => {
+                const row = pedidosTableBody.insertRow();
+                row.innerHTML = `
+                    <td>${pedido.id}</td>
+                    <td>${pedido.nombreCliente}</td>
+                    <td>${pedido.telefonoCliente}</td>
+                    <td>${pedido.descripcion}</td>
+                    <td>${pedido.cantidad}</td>
+                    <td>${pedido.esDelivery ? 'Sí' : 'No'}</td>
+                    <td>${new Date(pedido.fechaEntrega).toLocaleDateString()}</td>
+                    <td>${pedido.agendadoPorNombre || 'N/A'}</td>
+                `;
+            });
+        }
+
+        function loadUsers() {
+            usersTableBody.innerHTML = ''; // Limpiar tabla
+            users = JSON.parse(localStorage.getItem('users')) || []; // Recargar usuarios
+
+            const filteredUsers = users.filter(u => u.id !== loggedInUser.id); // No mostrar al admin actual en la lista para editarse a sí mismo de esta forma
+
+            if (filteredUsers.length === 0 && users.length <=1) { // Si solo queda el admin logueado
+                 noUsersMessage.textContent = 'No hay otros usuarios registrados.';
+                noUsersMessage.style.display = 'block';
+                usersTable.style.display = 'none';
+            } else if (users.length === 0) { // Si no hay ningún usuario (caso improbable si el admin existe)
+                noUsersMessage.textContent = 'No hay usuarios registrados.';
+                noUsersMessage.style.display = 'block';
+                usersTable.style.display = 'none';
+                return;
+            } else {
+                 noUsersMessage.style.display = 'none';
+                 usersTable.style.display = 'table';
+            }
+
+
+            users.forEach(user => {
+                // No permitir editar al usuario admin principal desde esta interfaz para evitar bloqueos
+                // o si se quisiera, se podría deshabilitar el botón de editar para el admin.
+                // Por ahora, todos los usuarios (excepto el logueado) se pueden editar.
+                // El admin logueado no aparecerá en esta lista si se usa filteredUsers. Si se usa `users`, sí.
+                // Vamos a mostrar todos, pero deshabilitar la edición del admin principal.
+                const row = usersTableBody.insertRow();
+                const isAdminText = user.isAdmin ? 'Sí' : 'No';
+                let actionsHtml = '';
+
+                if (user.username === "Admin") { // Usuario Admin original no se puede editar ni eliminar desde aquí
+                     actionsHtml = `<button class="action-button edit-button opacity-50 cursor-not-allowed" disabled title="El usuario Admin principal no se puede editar aquí.">Editar</button>`;
+                } else {
+                     actionsHtml = `<button class="action-button edit-button" onclick="openEditUserModal(${user.id})">Editar</button>`;
+                     // Podríamos añadir un botón de eliminar aquí si fuera necesario
+                }
+
+
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                    <td>${user.username}</td>
+                    <td>${isAdminText}</td>
+                    <td>${actionsHtml}</td>
+                `;
+            });
+        }
+
+        // --- Lógica de Modales ---
+        // Modal Crear Usuario
+        openCreateUserModalButton.addEventListener('click', () => {
+            createUserModal.style.display = 'block';
+            createUserForm.reset();
+        });
+        closeCreateUserModalButton.addEventListener('click', () => createUserModal.style.display = 'none');
+        cancelCreateUserButton.addEventListener('click', () => createUserModal.style.display = 'none');
+
+        // Modal Editar Usuario
+        closeEditUserModalButton.addEventListener('click', () => editUserModal.style.display = 'none');
+        cancelEditUserButton.addEventListener('click', () => editUserModal.style.display = 'none');
+
+        window.onclick = function(event) { // Cerrar modal si se hace clic fuera
+            if (event.target == createUserModal) {
+                createUserModal.style.display = 'none';
+            }
+            if (event.target == editUserModal) {
+                editUserModal.style.display = 'none';
+            }
+        }
+
+        // --- Lógica de Formularios ---
+        // Crear Usuario
+        createUserForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const name = event.target.newUserName.value.trim();
+            const username = event.target.newUserUsername.value.trim();
+            const password = event.target.newUserPassword.value;
+            const isAdmin = event.target.newUserIsAdmin.value === 'true';
+
+            if (users.find(u => u.username === username)) {
+                alert('Error: El nombre de usuario ya existe.');
+                return;
+            }
+
+            const newUser = {
+                id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+                name: name,
+                username: username,
+                password: password, // En una aplicación real, hashear la contraseña
+                isAdmin: isAdmin
+            };
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Usuario creado exitosamente.');
+            createUserModal.style.display = 'none';
+            loadUsers(); // Recargar la lista de usuarios
+        });
+
+        // Abrir Modal para Editar Usuario
+        window.openEditUserModal = function(userId) { // Se hace global para llamarla desde el HTML
+            const userToEdit = users.find(u => u.id === userId);
+            if (!userToEdit) {
+                alert('Usuario no encontrado.');
+                return;
+            }
+
+            // No permitir editar el usuario "Admin" principal
+            if (userToEdit.username === "Admin") {
+                alert("El usuario 'Admin' principal no puede ser modificado desde esta interfaz para proteger el acceso.");
+                return;
+            }
+
+            document.getElementById('editUserId').value = userToEdit.id;
+            document.getElementById('editUserName').value = userToEdit.name;
+            document.getElementById('editUserUsername').value = userToEdit.username;
+            // document.getElementById('editUserUsername').readOnly = true; // Username no se puede cambiar
+            document.getElementById('editUserPassword').value = ''; // Limpiar campo de contraseña
+            document.getElementById('editUserIsAdmin').value = userToEdit.isAdmin.toString();
+
+            // Prevenir que un admin se quite a sí mismo el rol de admin si es el único
+            const adminUsers = users.filter(u => u.isAdmin);
+            if (userToEdit.isAdmin && adminUsers.length === 1 && userToEdit.id === loggedInUser.id) {
+                 // Si se está editando a sí mismo y es el único admin, no permitir cambiar isAdmin a false
+                 // Esta lógica es más compleja si el admin logueado no es el "Admin" original.
+                 // Por simplicidad, el admin "Admin" no se puede editar. Otros admins sí.
+                 // Si se edita otro admin, y es el último, no debería poder quitarse el rol.
+                 // Esta comprobación es para el caso en que se esté editando un admin que no es el "Admin" original.
+                 if(userToEdit.id === loggedInUser.id && users.filter(u => u.isAdmin).length === 1){
+                    document.getElementById('editUserIsAdmin').disabled = true;
+                    document.getElementById('editUserIsAdmin').title = "No puedes quitar el rol de administrador si eres el único."
+                 } else {
+                    document.getElementById('editUserIsAdmin').disabled = false;
+                    document.getElementById('editUserIsAdmin').title = "";
+                 }
+            } else {
+                 document.getElementById('editUserIsAdmin').disabled = false;
+                 document.getElementById('editUserIsAdmin').title = "";
+            }
+
+
+            editUserModal.style.display = 'block';
+        }
+
+        // Guardar Cambios de Usuario Editado
+        editUserForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const userId = parseInt(document.getElementById('editUserId').value);
+            const name = document.getElementById('editUserName').value.trim();
+            const newPassword = document.getElementById('editUserPassword').value;
+            const isAdmin = document.getElementById('editUserIsAdmin').value === 'true';
+
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex === -1) {
+                alert('Error: Usuario no encontrado para actualizar.');
+                return;
+            }
+
+            // Validar que no se esté quitando el rol de admin al último admin
+            const currentUserBeingEdited = users[userIndex];
+            if (currentUserBeingEdited.isAdmin && !isAdmin) { // Si se intenta quitar el rol de admin
+                const adminCount = users.filter(u => u.isAdmin).length;
+                if (adminCount === 1) {
+                    alert('Error: No se puede quitar el rol de administrador al último usuario administrador.');
+                    // Forzar a que siga siendo admin si es el último
+                    document.getElementById('editUserIsAdmin').value = "true";
+                    return; // Detener el proceso de guardado
+                }
+            }
+
+
+            users[userIndex].name = name;
+            if (newPassword) { // Solo actualizar contraseña si se proveyó una nueva
+                users[userIndex].password = newPassword;
+            }
+            users[userIndex].isAdmin = isAdmin;
+
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Usuario actualizado exitosamente.');
+            editUserModal.style.display = 'none';
+            loadUsers(); // Recargar la lista de usuarios
+        });
+
+
+        // --- Logout ---
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html'; // O la página de login
+        });
+
+        // --- Personalización del Logo (Ejemplo) ---
+        // logoNavContainer.innerHTML = '<img src="tu-logo-nav.png" alt="Logo" class="h-10 w-auto">';
+
+        // --- Carga Inicial ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showPedidosTab(); // Mostrar la pestaña de pedidos por defecto
+            // La carga de usuarios se hará al cambiar a la pestaña de usuarios.
+        });
+
+    </script>
+</body>
+</html>

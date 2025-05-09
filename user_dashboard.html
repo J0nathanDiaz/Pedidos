@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Usuario - Gestión de Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .logo-placeholder-nav {
+            width: 50px;
+            height: 50px;
+            background-color: #e0e0e0;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #757575;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto; /* Margen reducido para formularios más largos */
+            padding: 25px;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 600px; /* Ancho aumentado para el formulario de pedido */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+            font-size: 0.875rem; /* Texto un poco más pequeño en tablas */
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        .action-button {
+            padding: 0.375rem 0.625rem; /* Botones de acción más pequeños */
+            border-radius: 0.375rem;
+            font-size: 0.75rem; /* Texto más pequeño en botones */
+            margin-right: 0.25rem; /* Margen reducido */
+            transition: background-color 0.2s;
+        }
+        .edit-button {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .edit-button:hover {
+            background-color: #2563eb;
+        }
+        /* Estilo para el "calendario" simple */
+        .calendar-list-item {
+            background-color: #fff;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center">
+                    <div id="logoNavContainer" class="logo-placeholder-nav mr-3">
+                        <span>Logo</span>
+                    </div>
+                    <span class="font-bold text-xl text-gray-800">Gestión de Pedidos</span>
+                </div>
+                <div class="flex items-center">
+                    <span id="welcomeUserName" class="text-gray-700 mr-4"></span>
+                    <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+                        Cerrar Sesión <i class="fas fa-sign-out-alt ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 p-6 bg-white rounded-xl shadow-lg">
+            <h1 id="mainUserHeading" class="text-2xl font-semibold text-gray-700">Mis Pedidos y Agenda</h1>
+            <p class="text-gray-600 mt-1">Aquí puedes agendar nuevos pedidos, ver los existentes y actualizarlos.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="md:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Agendar Nuevo Pedido</h2>
+                    <button id="openAddPedidoModal" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+                        <i class="fas fa-plus mr-2"></i>Añadir Pedido
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Próximos Pedidos (Calendario)</h2>
+                    <div id="simpleCalendarView" class="space-y-2 max-h-96 overflow-y-auto">
+                        </div>
+                    <p id="noUpcomingPedidosMessage" class="mt-2 text-gray-500" style="display: none;">No hay pedidos próximos en los siguientes 7 días.</p>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">Listado General de Pedidos</h2>
+                    <button id="downloadCsvButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg shadow-md text-sm">
+                        <i class="fas fa-file-csv mr-2"></i>Descargar CSV
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 border border-gray-200 rounded-lg">
+                    <div>
+                        <label for="filterDate" class="block text-sm font-medium text-gray-700">Fecha Entrega:</label>
+                        <input type="date" id="filterDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="filterDelivery" class="block text-sm font-medium text-gray-700">Tipo Delivery:</label>
+                        <select id="filterDelivery" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">Todos</option>
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2 md:col-span-1 flex items-end space-x-2">
+                         <button id="applyFilters" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-md text-sm">Filtrar</button>
+                         <button id="clearFilters" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md text-sm">Limpiar</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table id="pedidosTable" class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Descripción</th>
+                                <th>Cant.</th>
+                                <th>Delivery</th>
+                                <th>Fecha Entrega</th>
+                                <th>Agendado por</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pedidosTableBody">
+                            </tbody>
+                    </table>
+                </div>
+                <p id="noPedidosMessage" class="mt-4 text-gray-500" style="display: none;">No hay pedidos registrados que coincidan con los filtros.</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="pedidoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closePedidoModal">&times;</span>
+            <h3 id="pedidoModalTitle" class="text-lg font-medium text-gray-900 mb-6">Añadir Nuevo Pedido</h3>
+            <form id="pedidoForm">
+                <input type="hidden" id="pedidoId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="nombreCliente" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                        <input type="text" id="nombreCliente" name="nombreCliente" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="telefonoCliente" class="block text-sm font-medium text-gray-700">Teléfono del Cliente</label>
+                        <input type="tel" id="telefonoCliente" name="telefonoCliente" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción del Pedido</label>
+                    <textarea id="descripcion" name="descripcion" rows="3" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    <div class="mb-4">
+                        <label for="cantidad" class="block text-sm font-medium text-gray-700">Cantidad</label>
+                        <input type="number" id="cantidad" name="cantidad" min="1" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div class="mb-4">
+                        <label for="fechaEntrega" class="block text-sm font-medium text-gray-700">Fecha de Entrega</label>
+                        <input type="date" id="fechaEntrega" name="fechaEntrega" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700">¿Es para Delivery?</label>
+                    <div class="mt-2 flex items-center space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" id="deliverySi" name="esDelivery" value="true" class="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Sí</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" id="deliveryNo" name="esDelivery" value="false" checked class="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">No</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-8">
+                    <button type="button" id="cancelPedido" class="mr-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancelar</button>
+                    <button type="submit" id="savePedidoButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Guardar Pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- Autenticación y Protección de Ruta ---
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!loggedInUser) {
+            alert('Acceso denegado. Debes iniciar sesión.');
+            window.location.href = 'index.html'; // O la página de login
+        } else if (loggedInUser.isAdmin) {
+            // Opcional: Redirigir admin a su dashboard si intenta acceder aquí.
+            // alert('Redirigiendo al panel de administrador.');
+            // window.location.href = 'admin_dashboard.html';
+        }
+
+        // --- Elementos del DOM ---
+        const logoutButton = document.getElementById('logoutButton');
+        const welcomeUserName = document.getElementById('welcomeUserName');
+        const mainUserHeading = document.getElementById('mainUserHeading');
+        const logoNavContainer = document.getElementById('logoNavContainer');
+        // Pedidos
+        const pedidosTableBody = document.getElementById('pedidosTableBody');
+        const noPedidosMessage = document.getElementById('noPedidosMessage');
+        const openAddPedidoModalButton = document.getElementById('openAddPedidoModal');
+        // Modal Pedido
+        const pedidoModal = document.getElementById('pedidoModal');
+        const closePedidoModalButton = document.getElementById('closePedidoModal');
+        const cancelPedidoButton = document.getElementById('cancelPedido');
+        const pedidoForm = document.getElementById('pedidoForm');
+        const pedidoModalTitle = document.getElementById('pedidoModalTitle');
+        const savePedidoButton = document.getElementById('savePedidoButton');
+        // Filtros
+        const filterDateInput = document.getElementById('filterDate');
+        const filterDeliverySelect = document.getElementById('filterDelivery');
+        const applyFiltersButton = document.getElementById('applyFilters');
+        const clearFiltersButton = document.getElementById('clearFilters');
+        // Calendario Simple
+        const simpleCalendarView = document.getElementById('simpleCalendarView');
+        const noUpcomingPedidosMessage = document.getElementById('noUpcomingPedidosMessage');
+        // CSV
+        const downloadCsvButton = document.getElementById('downloadCsvButton');
+
+
+        // --- Datos (desde localStorage) ---
+        let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [];
+        let allPedidos = [...pedidos]; // Copia para mantener los datos originales al filtrar
+
+        // --- Configuración Inicial ---
+        if (loggedInUser) {
+            welcomeUserName.textContent = `Hola, ${loggedInUser.name.split(' ')[0]}!`;
+            mainUserHeading.textContent = `Pedidos de ${loggedInUser.name}`;
+        }
+        // Establecer la fecha mínima para la entrega como hoy
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaEntrega').setAttribute('min', today);
+
+
+        // --- Lógica de Carga y Visualización de Pedidos ---
+        function renderPedidos(pedidosToRender = pedidos) {
+            pedidosTableBody.innerHTML = '';
+            if (pedidosToRender.length === 0) {
+                noPedidosMessage.style.display = 'block';
+                pedidosTable.style.display = 'none';
+            } else {
+                noPedidosMessage.style.display = 'none';
+                pedidosTable.style.display = 'table';
+                pedidosToRender.sort((a, b) => new Date(a.fechaEntrega) - new Date(b.fechaEntrega)); // Ordenar por fecha
+                pedidosToRender.forEach(pedido => {
+                    const row = pedidosTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${pedido.id}</td>
+                        <td>${pedido.nombreCliente}</td>
+                        <td>${pedido.telefonoCliente}</td>
+                        <td class="max-w-xs truncate" title="${pedido.descripcion}">${pedido.descripcion.substring(0,30)}${pedido.descripcion.length > 30 ? '...' : ''}</td>
+                        <td>${pedido.cantidad}</td>
+                        <td>${pedido.esDelivery ? 'Sí' : 'No'}</td>
+                        <td>${new Date(pedido.fechaEntrega).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                        <td>${pedido.agendadoPorNombre || 'N/A'}</td>
+                        <td>
+                            <button class="action-button edit-button" onclick="openEditPedidoModal(${pedido.id})">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                        </td>
+                    `;
+                });
+            }
+            renderSimpleCalendar();
+        }
+
+        // --- Lógica del Calendario Simple (Próximos 7 días) ---
+        function renderSimpleCalendar() {
+            simpleCalendarView.innerHTML = '';
+            const unaSemanaDesdeHoy = new Date();
+            unaSemanaDesdeHoy.setDate(unaSemanaDesdeHoy.getDate() + 7);
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0); // Para comparar solo fechas
+
+            const proximosPedidos = pedidos
+                .filter(p => {
+                    const fechaEntrega = new Date(p.fechaEntrega);
+                    fechaEntrega.setUTCHours(0,0,0,0); // Ajustar a UTC para comparar con input date
+                    return fechaEntrega >= hoy && fechaEntrega <= unaSemanaDesdeHoy;
+                })
+                .sort((a, b) => new Date(a.fechaEntrega) - new Date(b.fechaEntrega));
+
+            if (proximosPedidos.length === 0) {
+                noUpcomingPedidosMessage.style.display = 'block';
+            } else {
+                noUpcomingPedidosMessage.style.display = 'none';
+                proximosPedidos.forEach(pedido => {
+                    const item = document.createElement('div');
+                    item.className = 'calendar-list-item text-sm';
+                    item.innerHTML = `
+                        <p class="font-semibold">${pedido.nombreCliente} - ${pedido.descripcion.substring(0,20)}...</p>
+                        <p class="text-xs text-gray-600">Entrega: ${new Date(pedido.fechaEntrega).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                    `;
+                    simpleCalendarView.appendChild(item);
+                });
+            }
+        }
+
+
+        // --- Lógica de Modales (Añadir/Editar Pedido) ---
+        function openAddModal() {
+            pedidoModalTitle.textContent = 'Añadir Nuevo Pedido';
+            savePedidoButton.textContent = 'Guardar Pedido';
+            pedidoForm.reset();
+            document.getElementById('pedidoId').value = '';
+            document.getElementById('deliveryNo').checked = true; // Default a No Delivery
+            document.getElementById('fechaEntrega').value = today; // Default a hoy
+            document.getElementById('fechaEntrega').setAttribute('min', today);
+            pedidoModal.style.display = 'block';
+        }
+
+        window.openEditPedidoModal = function(id) { // Global para onclick
+            const pedido = pedidos.find(p => p.id === id);
+            if (!pedido) return;
+
+            // Solo permitir editar pedidos agendados por el usuario actual o si es admin (aunque admin usa otro panel)
+            // Para este panel de usuario, solo los propios.
+            if (pedido.agendadoPorId !== loggedInUser.id && !loggedInUser.isAdmin) {
+                alert("Solo puedes editar los pedidos que tú has agendado.");
+                return;
+            }
+
+            pedidoModalTitle.textContent = 'Editar Pedido';
+            savePedidoButton.textContent = 'Guardar Cambios';
+            document.getElementById('pedidoId').value = pedido.id;
+            document.getElementById('nombreCliente').value = pedido.nombreCliente;
+            document.getElementById('telefonoCliente').value = pedido.telefonoCliente;
+            document.getElementById('descripcion').value = pedido.descripcion;
+            document.getElementById('cantidad').value = pedido.cantidad;
+            // Formatear la fecha para el input type="date" (YYYY-MM-DD)
+            const fechaEntregaInput = new Date(pedido.fechaEntrega);
+            // Ajustar por zona horaria para que la fecha no cambie incorrectamente
+            const offset = fechaEntregaInput.getTimezoneOffset();
+            const fechaCorregida = new Date(fechaEntregaInput.getTime() - (offset*60*1000));
+            document.getElementById('fechaEntrega').value = fechaCorregida.toISOString().split('T')[0];
+
+            document.getElementById('fechaEntrega').setAttribute('min', today); // Mantener la validación de fecha mínima
+
+            if (pedido.esDelivery) {
+                document.getElementById('deliverySi').checked = true;
+            } else {
+                document.getElementById('deliveryNo').checked = true;
+            }
+            pedidoModal.style.display = 'block';
+        }
+
+        openAddPedidoModalButton.addEventListener('click', openAddModal);
+        closePedidoModalButton.addEventListener('click', () => pedidoModal.style.display = 'none');
+        cancelPedidoButton.addEventListener('click', () => pedidoModal.style.display = 'none');
+        window.addEventListener('click', (event) => {
+            if (event.target == pedidoModal) {
+                pedidoModal.style.display = 'none';
+            }
+        });
+
+
+        // --- Lógica de Formulario (Guardar Pedido) ---
+        pedidoForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const id = document.getElementById('pedidoId').value;
+            const pedidoData = {
+                nombreCliente: document.getElementById('nombreCliente').value.trim(),
+                telefonoCliente: document.getElementById('telefonoCliente').value.trim(),
+                descripcion: document.getElementById('descripcion').value.trim(),
+                cantidad: parseInt(document.getElementById('cantidad').value),
+                fechaEntrega: document.getElementById('fechaEntrega').value, // YYYY-MM-DD
+                esDelivery: document.querySelector('input[name="esDelivery"]:checked').value === 'true',
+                agendadoPorId: loggedInUser.id,
+                agendadoPorNombre: loggedInUser.name,
+                fechaActualizacion: new Date().toISOString()
+            };
+
+            if (new Date(pedidoData.fechaEntrega) < new Date(today)) {
+                alert("La fecha de entrega no puede ser anterior a hoy.");
+                return;
+            }
+
+            if (id) { // Editar pedido existente
+                const index = pedidos.findIndex(p => p.id === parseInt(id));
+                if (index !== -1) {
+                    // Mantener fecha de creación original y el ID
+                    pedidos[index] = { ...pedidos[index], ...pedidoData };
+                    alert('Pedido actualizado exitosamente.');
+                }
+            } else { // Crear nuevo pedido
+                const newId = pedidos.length > 0 ? Math.max(...pedidos.map(p => p.id)) + 1 : 1;
+                pedidos.push({
+                    id: newId,
+                    ...pedidoData,
+                    fechaCreacion: new Date().toISOString()
+                });
+                alert('Pedido agendado exitosamente.');
+            }
+
+            localStorage.setItem('pedidos', JSON.stringify(pedidos));
+            allPedidos = [...pedidos]; // Actualizar la copia de todos los pedidos
+            renderPedidos();
+            pedidoModal.style.display = 'none';
+        });
+
+        // --- Lógica de Filtros ---
+        applyFiltersButton.addEventListener('click', () => {
+            const filterDateValue = filterDateInput.value;
+            const filterDeliveryValue = filterDeliverySelect.value;
+
+            let filteredPedidos = [...allPedidos]; // Empezar con todos los pedidos
+
+            if (filterDateValue) {
+                filteredPedidos = filteredPedidos.filter(p => p.fechaEntrega === filterDateValue);
+            }
+            if (filterDeliveryValue !== "") { // "true" o "false" como strings
+                const isDelivery = filterDeliveryValue === "true";
+                filteredPedidos = filteredPedidos.filter(p => p.esDelivery === isDelivery);
+            }
+            renderPedidos(filteredPedidos); // Renderizar con los pedidos filtrados
+        });
+
+        clearFiltersButton.addEventListener('click', () => {
+            filterDateInput.value = '';
+            filterDeliverySelect.value = '';
+            renderPedidos(allPedidos); // Renderizar todos los pedidos
+        });
+
+
+        // --- Lógica de Descarga CSV ---
+        downloadCsvButton.addEventListener('click', () => {
+            if (pedidos.length === 0) {
+                alert("No hay pedidos para exportar.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Encabezados
+            const headers = ["ID Pedido", "Nombre Cliente", "Teléfono Cliente", "Descripción", "Cantidad", "Es Delivery", "Fecha Entrega", "Fecha Creación", "Agendado Por"];
+            csvContent += headers.join(",") + "\r\n";
+
+            pedidos.forEach(pedido => {
+                const row = [
+                    pedido.id,
+                    `"${pedido.nombreCliente.replace(/"/g, '""')}"`, // Manejar comillas en nombres
+                    pedido.telefonoCliente,
+                    `"${pedido.descripcion.replace(/"/g, '""')}"`, // Manejar comillas
+                    pedido.cantidad,
+                    pedido.esDelivery ? "Sí" : "No",
+                    new Date(pedido.fechaEntrega).toLocaleDateString('es-ES'),
+                    new Date(pedido.fechaCreacion).toLocaleString('es-ES'),
+                    `"${pedido.agendadoPorNombre.replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "pedidos_exportados.csv");
+            document.body.appendChild(link); // Requerido para Firefox
+            link.click();
+            document.body.removeChild(link);
+        });
+
+
+        // --- Logout ---
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html'; // O la página de login
+        });
+
+        // --- Personalización del Logo (Ejemplo) ---
+        // logoNavContainer.innerHTML = '<img src="tu-logo-nav.png" alt="Logo" class="h-10 w-auto">';
+
+        // --- Carga Inicial ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar todos los pedidos al inicio (sin filtros)
+            allPedidos = JSON.parse(localStorage.getItem('pedidos')) || [];
+            pedidos = [...allPedidos];
+            renderPedidos();
+        });
+    </script>
+</body>
+</html>
